@@ -1,0 +1,75 @@
+## Ignore Visual Studio temporary files, build results, and
+## user-specific files
+
+# Build results
+bin/
+obj/
+out/
+
+# Visual Studio files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VS Code
+.vscode/
+.history/
+
+# Rider
+.idea/
+
+# NuGet
+*.nupkg
+# NuGet packages folder
+packages/
+# Uncomment if using Package Restore
+# !packages/**/*.nupkg
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# OS generated files
+*.DS_Store
+*.AppleDouble
+*.LSOverride
+
+# Dotnet temporary files
+*.dotnet/
+*.dotCover
+*.dotMemory
+*.dotTrace
+
+# Logs
+*.log
+
+# Resharper
+_ReSharper*/
+*.DotSettings.user
+
+# Publish output
+publish/
+
+# User secrets
+secrets.json
+
+# Backup files
+*.bak
+*.backup
+*.swp
+
+# Rider caches
+.idea/
+*.iml
+out/
+
+# Others
+*.vs/
+*.ncb
+*.sdf
+*.cache
+*.dbmdl
+*.pdb
