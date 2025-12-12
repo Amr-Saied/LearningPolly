@@ -5,6 +5,9 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Polly;
+using Polly.Fallback;
+using Polly.Retry;
+using Polly.Timeout;
 
 public record InventoryItem
 {
@@ -81,34 +84,48 @@ public class InventoryProcessor
 
     private static decimal GetDiscountFactorSafe()
     {
-        // Fallback: return 1.0m if everything fails
-        var fallbackPolicy = Policy<decimal>
-            .Handle<Exception>()
-            .Fallback(() =>
-            {
-                Console.WriteLine("Fallback activated: returning default discount 1.0");
-                return 1.0m;
-            });
-
-        // Retry: retry 3 times with delay
-        var retryPolicy = Policy<decimal>
-            .Handle<Exception>()
-            .Retry(
-                3,
-                (outcome, attempt, context) =>
+        var pipeline = new ResiliencePipelineBuilder<decimal>()
+            .AddFallback(
+                new FallbackStrategyOptions<decimal>
                 {
-                    Console.WriteLine($"Retry {attempt} due to: {outcome.Exception?.Message}");
+                    FallbackAction = static args =>
+                    {
+                        Console.WriteLine("Fallback activated: defaulting to 1.0");
+                        return Outcome.FromResultAsValueTask(1.0m);
+                    }
                 }
-            );
+            )
+            .AddRetry(
+                new RetryStrategyOptions<decimal>
+                {
+                    MaxRetryAttempts = 3,
+                    Delay = TimeSpan.FromMilliseconds(50),
+                    OnRetry = static args =>
+                    {
+                        Console.WriteLine(
+                            $"Retry #{args.AttemptNumber} due to {args.Outcome.Exception?.Message ?? "unknown error"}"
+                        );
+                        return default;
+                    }
+                }
+            )
+            .AddTimeout(
+                new TimeoutStrategyOptions
+                {
+                    Timeout = TimeSpan.FromMilliseconds(100),
+                    OnTimeout = static args =>
+                    {
+                        Console.WriteLine($"Timeout after {args.Timeout.TotalMilliseconds} ms");
+                        return default;
+                    }
+                }
+            )
+            .Build();
 
-        // Timeout: 100ms timeout
-        var timeoutPolicy = Policy.Timeout<decimal>(TimeSpan.FromMilliseconds(100));
-
-        // Wrap them together
-        var policyWrap = fallbackPolicy.Wrap(retryPolicy).Wrap(timeoutPolicy);
-
-        // Execute the actual function
-        return policyWrap.Execute(() => GetDiscountFactor());
+        return pipeline.Execute(
+            static (CancellationToken ct) => GetDiscountFactor(),
+            CancellationToken.None
+        );
     }
 
     private static List<InventoryItem> GetInventoryData()
